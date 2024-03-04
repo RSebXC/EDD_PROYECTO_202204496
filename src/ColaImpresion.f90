@@ -1,68 +1,49 @@
-MODULE ColaImpresionModule
+MODULE ColaImpresion
     IMPLICIT NONE
 
-    TYPE, PUBLIC :: ImagenType
-        INTEGER :: idImagen
-        CHARACTER(10) :: tipoImagen  ! "Pequeña" o "Grande"
-        TYPE(ImagenType), POINTER :: siguiente => NULL()
-    END TYPE ImagenType
+    TYPE, PUBLIC :: NodoImpresion
+        INTEGER :: imgPequena
+        INTEGER :: imgGrande
+        TYPE(NodoImpresion), POINTER :: siguiente => NULL()
+    END TYPE NodoImpresion
 
     TYPE, PUBLIC :: ColaImpresionType
-        TYPE(ImagenType), POINTER :: frente => NULL()
-        TYPE(ImagenType), POINTER :: final => NULL()
+        TYPE(NodoImpresion), POINTER :: frente => NULL()
+        TYPE(NodoImpresion), POINTER :: final => NULL()
     END TYPE ColaImpresionType
 
     CONTAINS
 
-    SUBROUTINE Enqueue(cola, idImagen, tipoImagen)
-        TYPE(ColaImpresionType), INTENT(INOUT) :: cola
-        INTEGER, INTENT(IN) :: idImagen
-        CHARACTER(10), INTENT(IN) :: tipoImagen
-        TYPE(ImagenType), POINTER :: nuevaImagen
+    SUBROUTINE AgregarColaImpresion(thisColaImpresion, imgPequena, imgGrande)
+        TYPE(ColaImpresionType), INTENT(INOUT) :: thisColaImpresion
+        INTEGER, INTENT(IN) :: imgPequena, imgGrande
+        TYPE(NodoImpresion), POINTER :: nuevoNodo
 
-        ALLOCATE(nuevaImagen)
-        nuevaImagen%idImagen = idImagen
-        nuevaImagen%tipoImagen = tipoImagen
-        nuevaImagen%siguiente => NULL()
+        ALLOCATE(nuevoNodo)
+        nuevoNodo%imgPequena = imgPequena
+        nuevoNodo%imgGrande = imgGrande
+        nuevoNodo%siguiente => NULL()
 
-        IF (ASSOCIATED(cola%frente)) THEN
-            cola%final%siguiente => nuevaImagen
-            cola%final => nuevaImagen
+        IF (.NOT. ASSOCIATED(thisColaImpresion%frente)) THEN
+            thisColaImpresion%frente => nuevoNodo
+            thisColaImpresion%final => nuevoNodo
         ELSE
-            cola%frente => nuevaImagen
-            cola%final => nuevaImagen
+            thisColaImpresion%final%siguiente => nuevoNodo
+            thisColaImpresion%final => nuevoNodo
         END IF
-    END SUBROUTINE Enqueue
+    END SUBROUTINE AgregarColaImpresion
 
-    FUNCTION Dequeue(cola) RESULT(imagen)
-        TYPE(ColaImpresionType), INTENT(INOUT) :: cola
-        TYPE(ImagenType), POINTER :: imagen
+    SUBROUTINE VaciarColaImpresion(thisColaImpresion)
+        TYPE(ColaImpresionType), INTENT(INOUT) :: thisColaImpresion
+        TYPE(NodoImpresion), POINTER :: temp
 
-        IF (ASSOCIATED(cola%frente)) THEN
-            imagen => cola%frente
-            cola%frente => cola%frente%siguiente
-            IF (.NOT. ASSOCIATED(cola%frente)) THEN
-                cola%final => NULL()
-            END IF
-        ELSE
-            imagen => NULL()
-        END IF
-    END FUNCTION Dequeue
+        DO WHILE (ASSOCIATED(thisColaImpresion%frente))
+            temp => thisColaImpresion%frente
+            thisColaImpresion%frente => thisColaImpresion%frente%siguiente
+            DEALLOCATE(temp)
+        END DO
 
-    SUBROUTINE MostrarCola(cola)
-        TYPE(ColaImpresionType), INTENT(IN) :: cola
-        TYPE(ImagenType), POINTER :: imagenActual
+        thisColaImpresion%final => NULL()
+    END SUBROUTINE VaciarColaImpresion
 
-        IF (ASSOCIATED(cola%frente)) THEN
-            WRITE(*, '(A)') 'Cola de Impresión:'
-            imagenActual => cola%frente
-            DO WHILE (ASSOCIATED(imagenActual))
-                WRITE(*, '(A, I2, A)') 'Imagen: ', imagenActual%idImagen, ', Tipo: ', TRIM(imagenActual%tipoImagen)
-                imagenActual => imagenActual%siguiente
-            END DO
-        ELSE
-            WRITE(*, '(A)') 'La cola de impresión está vacía.'
-        END IF
-    END SUBROUTINE MostrarCola
-
-END MODULE ColaImpresionModule
+END MODULE ColaImpresion

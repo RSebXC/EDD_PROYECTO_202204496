@@ -1,63 +1,21 @@
-MODULE PilaImg
-  use ColaCliente
-
-  use VentanillaModule
-  IMPLICIT NONE
-
-  INTEGER, PARAMETER :: LIMITE_IMGP = 3   ! Establece el límite para IMGP
-  INTEGER, PARAMETER :: LIMITE_IMGG = 5   ! Establece el límite para IMGG
-
-  CONTAINS
-
-  SUBROUTINE LlamarSubrutina(tipoImagen, cliente)
-    CHARACTER(*), INTENT(IN) :: tipoImagen
-    TYPE(Cliente), INTENT(INOUT) :: client
-
-    SELECT CASE (tipoImagen)
-      CASE ('IMGP')
-        CALL CrearNodoVentanilla(client, LIMITE_IMGP, tipoImagen)
-      CASE ('IMGG')
-        CALL CrearNodoVentanilla(client, LIMITE_IMGG, tipoImagen)
-      CASE DEFAULT
-    END SELECT
-  END SUBROUTINE LlamarSubrutina
-
-  SUBROUTINE CrearNodoVentanilla(cliente, limite, tipoImagen)
-    TYPE(Cliente), INTENT(INOUT) :: cliente
-    INTEGER, INTENT(IN) :: limite
-    CHARACTER(*), INTENT(IN) :: tipoImagen
-
-    IF (cliente%ContadorImg(tipoImagen) < limite) THEN
-      ! Se crea el nodo solo si no se ha alcanzado el límite
-      CALL Apilar(cliente%Ventanilla%pila, tipoImagen)
-      cliente%ContadorImg(tipoImagen) = cliente%ContadorImg(tipoImagen) + 1
-    ELSE
-      WRITE(*, '(A, A, A)') 'Cliente ', TRIM(cliente%nombre), ' alcanzó el límite para ', tipoImagen
-    END IF
-  END SUBROUTINE CrearNodoVentanilla
-
-END MODULE PilaImg
-
-
 MODULE VentanillaModule
+  
     use ColaCliente
+    use PilaImagenes
+    use ColaImpresion
+    use ListaClientesAtendidos
     IMPLICIT NONE
-  
-    TYPE, public :: NodoPilaType
-      INTEGER :: idImagen
-      TYPE(NodoPilaType), POINTER :: siguiente => null()
-    END TYPE NodoPilaType
-  
-    TYPE, public :: PilaType
-      TYPE(NodoPilaType), POINTER :: tope => NULL()
-    END TYPE PilaType
   
     TYPE, public :: VentanillaType
       INTEGER :: id
-      TYPE (Cliente) :: Clientes
+      TYPE(ListaClientes) :: Atendido
+      TYPE(ColaImpresionType) :: ColaImp
+      TYPE (Cliente) :: Client
       LOGICAL :: disponible = .true.
-      TYPE(PilaType):: pila
+      LOGICAL :: colaImpresionEjecutada = .false.
+      TYPE(PIMG):: pilita
       TYPE(VentanillaType), POINTER :: siguiente => null()
+      integer :: contg,contp = 0
     END TYPE VentanillaType
   
     TYPE, public :: listaVentanillas
@@ -67,33 +25,7 @@ MODULE VentanillaModule
 
   
     CONTAINS
-  
-    SUBROUTINE InicializarPila(pila)
-      TYPE(PilaType), INTENT(OUT) :: pila
-      ALLOCATE(pila%tope)
-      pila%tope => NULL()
-    END SUBROUTINE InicializarPila
-  
-    SUBROUTINE Apilar(pila, idImagen)
-      TYPE(PilaType), INTENT(INOUT) :: pila
-      INTEGER, INTENT(IN) :: idImagen
-      TYPE(NodoPilaType), POINTER :: nuevoNodo
-      ALLOCATE(nuevoNodo)
-      nuevoNodo%idImagen = idImagen
-      nuevoNodo%siguiente => pila%tope
-      pila%tope => nuevoNodo
-    END SUBROUTINE Apilar
-  
-    SUBROUTINE Desapilar(pila)
-      TYPE(PilaType), INTENT(INOUT) :: pila
-      TYPE(NodoPilaType), POINTER :: nodoDesapilado
-  
-      IF (ASSOCIATED(pila%tope)) THEN
-        nodoDesapilado => pila%tope
-        pila%tope => pila%tope%siguiente
-        DEALLOCATE(nodoDesapilado)
-      END IF
-    END SUBROUTINE Desapilar
+
   
     SUBROUTINE CrearVentanillas(lista, numVentanillas)
       TYPE(listaVentanillas), INTENT(INOUT) :: lista
@@ -130,24 +62,57 @@ MODULE VentanillaModule
       ! Buscar la primera ventanilla que no esté ocupada
       DO WHILE (ASSOCIATED(ventanilla) )
         if (ventanilla%disponible)then
-          ventanilla%Clientes = clientess
+          ventanilla%Client = clientess
           ventanilla%disponible = .false.
-          write (*,'(A,A,A)') "Cliente ", trim(clientess%nombre), "Se agrego con exito a la ventanilla"
+          write (*,'(A,A,A)') "Cliente ", trim(clientess%nombre), " se agrego con exito a la ventanilla"
           exit
+        else
+          ventanilla => ventanilla%siguiente
+        END IF
+        
+      END DO
+    END SUBROUTINE BuscarVentanillaDisponible
+  
+    
+  subroutine AgregarIMG (listaVen)
+    TYPE(listaVentanillas), INTENT(IN) :: listaVen
+      TYPE(VentanillaType), POINTER :: ventanilla
+      TYPE(Cliente), POINTER :: clientito
+      ventanilla => listaVen%tope
+    
+      ! Buscar la primera ventanilla que no esté ocupada
+      DO WHILE (ASSOCIATED(ventanilla) )
+        if (.Not. ventanilla%disponible)then
+        
+            IF (ventanilla%contg <= ventanilla%Client%img_g) THEN
+              CALL ventanilla%pilita%pushPila(1)
+              ventanilla%contg = ventanilla%contg + 1
+              WRITE(*, '(A, A, A)') 'Cliente ', TRIM(ventanilla%Client%nombre), ' agrego una imagen grande '
+
+            ELSE IF (ventanilla%contp <= ventanilla%Client%img_p) THEN
+                CALL ventanilla%pilita%pushPila(1)
+                ventanilla%contp = ventanilla%contp + 1
+                WRITE(*, '(A, A, A)') 'Cliente ', TRIM(ventanilla%Client%nombre), ' agrego una imagen pequena '
+
+               else
+              WRITE(*, '(A, A, A)') 'Cliente ', TRIM(ventanilla%Client%nombre), ' alcanzo el limite'
+              ventanilla%disponible = .true.
+              CALL ventanilla%pilita%popPila()
+              CALL AgregarColaImpresion(ventanilla%ColaImp, ventanilla%Client%img_p, ventanilla%Client%img_g)
+                WRITE(*,*) 'Las imagenes del Cliente: ', TRIM(ventanilla%Client%nombre), ' se agregaron a la cola de impresion'
+              IF (ventanilla%colaImpresionEjecutada) THEN
+                CALL AgregarClienteAtendido(ventanilla%Atendido, ventanilla%Client%id, &
+                                            ventanilla%Client%nombre, ventanilla%Client%img_p, ventanilla%Client%img_g)
+
+               ELSE
+                ventanilla%colaImpresionEjecutada = .true.
+
+              END IF
+            END IF
         END IF
         ventanilla => ventanilla%siguiente
       END DO
-    END SUBROUTINE BuscarVentanillaDisponible
-    
-    FUNCTION VentanillaOcupada(ventanilla) RESULT(ocupada)
-      TYPE(VentanillaType), INTENT(IN) :: ventanilla
-      LOGICAL :: ocupada
-    
-      ! Verificar si la ventanilla está ocupada (pila no vacía)
-      ocupada = ASSOCIATED(ventanilla%pila%tope)
-    END FUNCTION VentanillaOcupada
-    
-    
+  end  subroutine AgregarIMG
   
   END MODULE VentanillaModule
   

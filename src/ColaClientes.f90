@@ -127,4 +127,73 @@ contains
     end function PopCliente
 
     
+    subroutine GenerarClientesAleatorios(thisCola)
+        type(ColaClientes), intent(INOUT) :: thisCola
+        integer :: i, id, img_p, img_g
+        character(50) :: nombre_completo
+
+        do i = 1, 3
+            ! Generar un ID único que no exista en la cola
+            id = GenerarIDUnico(thisCola)
+
+            ! Generar nombre completo aleatorio
+            call GenerarNombreCompleto(nombre_completo)
+
+            ! Generar número aleatorio de imágenes pequeñas y grandes
+            img_p = floor(rand()*10)  ! Número aleatorio entre 0 y 9
+            img_g = floor(rand()*10)
+
+            ! Agregar el cliente a la cola
+            call PushCliente(thisCola, id, trim(nombre_completo), img_p, img_g)
+            write (*,*) "El cliente ", trim(nombre_completo), " se anadio a la cola"
+        end do
+    end subroutine GenerarClientesAleatorios
+
+    function GenerarIDUnico(thisCola) result(id_generado)
+        type(ColaClientes), intent(IN) :: thisCola
+        integer :: id_generado
+        logical :: id_repetido
+
+        do
+            id_generado = floor(rand()*1000) + 1  ! Número aleatorio entre 1 y 1000
+            id_repetido = BuscarIDRepetido(thisCola, id_generado)
+
+            if (.not. id_repetido) exit  ! Salir del bucle si el ID no está repetido
+        end do
+    end function GenerarIDUnico
+
+    subroutine GenerarNombreCompleto(nombre_completo)
+        character(50), intent(out) :: nombre_completo
+        integer :: indice_nombre, indice_apellido
+
+        ! Conjunto de nombres y apellidos disponibles
+        character(5), dimension(9) :: nombres = ["Juann", "Maria", "Carlo", "Laura", "Pedro","Jenny","Sebas","Edwar","Natyy"]
+        character(8), dimension(8) :: apellidos = ["Gomez", "Lopez", "Perez", "Rodri", "Ferna","Castr","Gutie","laine"]
+
+        ! Seleccionar aleatoriamente un nombre y un apellido
+        indice_nombre = floor(rand()*size(nombres)) + 1
+        indice_apellido = floor(rand()*size(apellidos)) + 1
+
+        ! Concatenar el nombre y el apellido
+        nombre_completo = trim(nombres(indice_nombre)) // " " // trim(apellidos(indice_apellido))
+    end subroutine GenerarNombreCompleto
+
+    logical function BuscarIDRepetido(thisCola, id)
+        type(ColaClientes), intent(IN) :: thisCola
+        integer, intent(in) :: id
+        type(NodoCliente), pointer :: temp
+
+        temp => thisCola%inicio
+        do while (associated(temp))
+            if (temp%cliente%id == id) then
+                BuscarIDRepetido = .true.
+                return
+            end if
+            temp => temp%siguiente
+        end do
+
+        BuscarIDRepetido = .false.
+    end function BuscarIDRepetido
+
+    
 end module ColaCliente

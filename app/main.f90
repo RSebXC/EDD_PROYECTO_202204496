@@ -1,7 +1,8 @@
 program MainProgram
     use ColaCliente
-    use PilaImg
     use VentanillaModule
+    use PilaImagenes
+    use ColaImpresion
 
     implicit none
     type(ColaClientes) :: recep
@@ -42,7 +43,7 @@ contains
                 case (6)
                     exit
                 case default
-                    print *, "Opción no válida. Intente nuevamente."
+                    print *, "Opcion no válida. Intente nuevamente."
             end select
         end do
     end subroutine MenuPrincipal
@@ -74,7 +75,7 @@ contains
                 case (3)
                     exit
                 case default
-                    print *, "Subopción no válida. Intente nuevamente."
+                    print *, "Subopcion no valida. Intente nuevamente."
             end select
         end do
     end subroutine ParametrosIniciales
@@ -91,7 +92,7 @@ contains
     subroutine EjecutarPaso()
         TYPE(VentanillaType), POINTER :: ventanilla
         TYPE(Cliente) :: clienteEliminado
-        type(PilaImg) :: pilita
+        TYPE(ColaImpresionType) :: Colaimpre
         INTEGER :: idImagen,i
 
         ! Obtener el cliente de la cola
@@ -100,9 +101,10 @@ contains
         IF (.not. clienteEliminado%id == 0) THEN
             
             ! Obtener la ventanilla disponible
+            CALL AgregarIMG(listaVentanilla)
             CALL BuscarVentanillaDisponible(listaVentanilla, clienteEliminado)
-            CALL LlamarSubrutina("IMGP", clienteEliminado)
-            
+            CALL GenerarClientesAleatorios(recep)
+            CALL VaciarColaImpresion(Colaimpre)
         END IF
     end subroutine EjecutarPaso
 
@@ -111,7 +113,7 @@ contains
     end subroutine EstadoMemoria
 
     subroutine GenerarReportes()
-        ! Genera los reportes necesarios
+    
     end subroutine GenerarReportes
 
     subroutine AcercaDe()
